@@ -1,0 +1,19 @@
+<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background rounded square -->
+  <rect width="48" height="48" rx="10" fill="#00A046"/>
+
+  <!-- Price tag shape -->
+  <g transform="translate(24,24) rotate(-45)">
+    <rect x="-9" y="-14" width="18" height="23" rx="3" fill="white" opacity="0.9"/>
+    <circle cx="0" cy="-9" r="2.5" fill="#00A046"/>
+  </g>
+
+  <!-- ₴ symbol on the tag -->
+  <text x="22" y="29" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#00A046" text-anchor="middle">₴</text>
+
+  <!-- Red prohibition circle -->
+  <circle cx="24" cy="24" r="18" fill="none" stroke="#E53935" stroke-width="3" opacity="0.9"/>
+
+  <!-- Red diagonal line -->
+  <line x1="11" y1="11" x2="37" y2="37" stroke="#E53935" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+</svg>

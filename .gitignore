@@ -1,0 +1,15 @@
+# Claude Code
+CLAUDE.md
+whats-next.md
+.claude/
+
+# macOS
+.DS_Store
+
+# Build artifacts
+*.xpi
+web-ext-artifacts/
+
+# Node
+node_modules/
+package-lock.json

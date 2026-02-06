@@ -1,0 +1,31 @@
+{
+  "manifest_version": 2,
+  "name": "Promo Price Hider",
+  "version": "1.0.0",
+  "description": "Приховує оманливі промо ціни на Rozetka, що потребують їхньої платіжної картки",
+  "icons": {
+    "48": "icon-48.png",
+    "96": "icon-96.png",
+    "128": "icon-128.png"
+  },
+  "browser_action": {
+    "default_icon": {
+      "48": "icon-48.png",
+      "96": "icon-96.png"
+    },
+    "default_title": "Promo Price Hider",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.rozetka.com.ua/*"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "permissions": ["storage", "activeTab", "*://*.rozetka.com.ua/*"]
+}
