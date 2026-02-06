@@ -31,8 +31,14 @@ jobs:
           name: promo-price-hider
           path: web-ext-artifacts/*.zip
 
+      - name: Copy as xpi
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: cp web-ext-artifacts/*.zip web-ext-artifacts/promo-price-hider.xpi
+
       - name: Create release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: web-ext-artifacts/*.zip
+          files: |
+            web-ext-artifacts/*.zip
+            web-ext-artifacts/promo-price-hider.xpi
