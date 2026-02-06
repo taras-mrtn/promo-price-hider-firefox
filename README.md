@@ -9,9 +9,11 @@ Firefox extension that hides misleading promo prices on Rozetka.com.ua that requ
 - Optionally blurs advertisement tiles
 - Optionally hides AI chat button
 
-## Installation
+## Install
 
-### Temporary (for testing)
+[**Firefox Add-ons**](https://addons.mozilla.org/uk/firefox/addon/promo-price-hider/)
+
+### From source (for testing)
 
 1. Open Firefox → `about:debugging` → "This Firefox" → "Load Temporary Add-on"
 2. Select `manifest.json` from this folder
