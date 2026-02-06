@@ -3,8 +3,12 @@ name: Build
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
     branches: [main]
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -26,3 +30,9 @@ jobs:
         with:
           name: promo-price-hider
           path: web-ext-artifacts/*.zip
+
+      - name: Create release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: web-ext-artifacts/*.zip
