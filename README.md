@@ -11,7 +11,7 @@ Firefox extension that hides misleading promo prices on Rozetka.com.ua that requ
 
 ## Install
 
-[**Firefox Add-ons**](https://addons.mozilla.org/uk/firefox/addon/promo-price-hider/) (under review, not yet available)
+[**Firefox Add-ons**](https://addons.mozilla.org/uk/firefox/addon/promo-price-hider/)
 
 ### From source (for testing)
 
