@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Check version change
         id: version
@@ -52,12 +52,33 @@ jobs:
         if: steps.version.outputs.changed == 'true' && github.ref == 'refs/heads/main'
         run: cp web-ext-artifacts/*.zip web-ext-artifacts/promo-price-hider.xpi
 
+      - name: Generate release notes from commits since the previous tag
+        if: steps.version.outputs.changed == 'true' && github.ref == 'refs/heads/main'
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="$PREV_TAG..HEAD"
+          else
+            RANGE="HEAD"
+          fi
+          {
+            echo "## Changes"
+            echo
+            git log --no-merges --pretty='- %s' "$RANGE"
+            if [ -n "$PREV_TAG" ]; then
+              echo
+              echo "**Full changelog:** https://github.com/${{ github.repository }}/compare/${PREV_TAG}...v${{ steps.version.outputs.current }}"
+            fi
+          } > release-notes.md
+          cat release-notes.md
+
       - name: Create release
         if: steps.version.outputs.changed == 'true' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.current }}
           name: v${{ steps.version.outputs.current }}
+          body_path: release-notes.md
           files: |
             web-ext-artifacts/*.zip
             web-ext-artifacts/promo-price-hider.xpi

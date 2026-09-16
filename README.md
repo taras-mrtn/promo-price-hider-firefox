@@ -8,6 +8,9 @@ Firefox extension that hides misleading promo prices on Rozetka.com.ua that requ
 - Hides "Картка Rozetka" promo banners
 - Optionally blurs advertisement tiles
 - Optionally hides AI chat button
+- Optionally hides the top banner and the main promo slider on the main page
+- Optionally moves the "Продавець" (seller) filter to the top of the catalog sidebar
+- Optionally auto-selects Rozetka as the only seller on catalog and search pages
 
 ## Install
 
@@ -40,6 +43,10 @@ Click the extension icon in the toolbar:
 - **Увімкнути** — main toggle to enable/disable
 - **Розмити рекламні картки** — blur advertisement tiles
 - **Приховати кнопку Rozetka AI** — hide AI chat button
+- **Приховати верхній банер** — hide the promo strip above the header
+- **Приховати головний банер-слайдер** — hide the main promo carousel
+- **Фільтр «Продавець» зверху** — move the seller filter to the top of the sidebar
+- **Тільки продавець Rozetka** — auto-apply the "Rozetka" seller filter (off by default; turning it off removes the filter again)
 
 ## Note
 
@@ -51,7 +58,7 @@ This extension relies on specific DOM structure and CSS class names of the websi
 - `content.js` — DOM hiding/blurring logic
 - `background.js` — State management and badge updates
 - `popup.html/js` — Popup UI
-- `icon-48/96/128.png` — Extension icons
+- `icons/` — Extension icons
 
 ## License
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Promo Price Hider",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Приховує оманливі промо ціни на Rozetka, що потребують їхньої платіжної картки",
   "icons": {
     "48": "icons/icon-48.png",
