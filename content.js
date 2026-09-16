@@ -2,6 +2,10 @@
 let isEnabled = true;
 let blurAds = true;
 let hideAiButton = true;
+let sellerOnTop = true;
+let rozetkaSellerOnly = false;
+let hideTopBanner = true;
+let hideMainSlider = true;
 let hiddenElements = new Set();
 
 // Hide an element with display:none, saving original value for restoration
@@ -26,6 +30,116 @@ function blurElement(element) {
   element.style.userSelect = 'none';
   hiddenElements.add(element);
   return true;
+}
+
+// Stylesheet rule that beats the page's inline order (Angular rewrites inline styles on hydration)
+const SELLER_TOP_ATTR = 'data-promo-price-hider-top';
+function ensureSellerTopStyle() {
+  if (document.getElementById('promo-price-hider-style')) return;
+  const style = document.createElement('style');
+  style.id = 'promo-price-hider-style';
+  style.textContent = `[${SELLER_TOP_ATTR}] { order: -100 !important; }`;
+  (document.head || document.documentElement).appendChild(style);
+}
+
+// Move an element to the top of a grid/flex container by marking it for the stylesheet rule above
+function moveToTop(element) {
+  ensureSellerTopStyle();
+  if (element.hasAttribute(SELLER_TOP_ATTR)) return false;
+  element.setAttribute(SELLER_TOP_ATTR, 'true');
+  hiddenElements.add(element);
+  return true;
+}
+
+// Find the "Продавець" (seller) filter block in the catalog sidebar, if present in this session
+function findSellerFilter() {
+  for (const details of document.querySelectorAll('details[data-testid="filter"]')) {
+    const summary = details.querySelector('summary');
+    if (summary && summary.textContent.trim().startsWith('Продавець')) return details;
+  }
+  return null;
+}
+
+// Identify the seller-filter scope of the current page: a catalog category or a search query
+function getSellerScope() {
+  const category = location.pathname.match(/\/c(\d+)\//);
+  if (category) return 'category:' + category[1];
+  if (/^\/(?:ua\/)?search\/?$/.test(location.pathname)) {
+    return 'search:' + (new URL(location.href).searchParams.get('text') || '');
+  }
+  return null;
+}
+
+// Build the current page URL with seller=rozetka_only added (add=true) or removed (add=false).
+// Catalog pages keep filters in a ";"-joined path segment after /c<id>/; search pages use query params.
+function buildSellerUrl(url, add) {
+  const parsed = new URL(url);
+  if (/^\/(?:ua\/)?search\/?$/.test(parsed.pathname)) {
+    const has = parsed.searchParams.get('seller') === 'rozetka_only';
+    if (add === has) return null;
+    if (add) parsed.searchParams.set('seller', 'rozetka_only');
+    else parsed.searchParams.delete('seller');
+    return parsed.href;
+  }
+  const match = url.match(/^(https?:\/\/[^/]+\/(?:ua\/)?[^/]+\/c\d+\/)([^/?#]*=[^/?#]*\/)?(.*)$/);
+  if (!match) return null;
+  let filters = match[2] ? match[2].slice(0, -1).split(';') : [];
+  const has = filters.includes('seller=rozetka_only');
+  if (add) {
+    if (filters.some(f => f.startsWith('seller='))) return null;
+    filters.push('seller=rozetka_only');
+    filters.sort();
+  } else {
+    if (!has) return null;
+    filters = filters.filter(f => f !== 'seller=rozetka_only');
+  }
+  const segment = filters.length ? filters.join(';') + '/' : '';
+  return match[1] + segment + match[3];
+}
+
+function sellerAppliedKey(scope) {
+  return 'promoPriceHider.sellerApplied.' + scope;
+}
+
+// Redirect to the Rozetka-only seller view once per scope per tab, so manual changes are respected
+function applyRozetkaSellerOnly(sellerFilter) {
+  if (sellerFilter.querySelector('.rz-checkbox--checked, .rz-checkbox--intermediate')) return;
+  const scope = getSellerScope();
+  if (!scope) return;
+  const key = sellerAppliedKey(scope);
+  try {
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+  } catch (e) {
+    return;
+  }
+  const target = buildSellerUrl(location.href, true);
+  if (target && target !== location.href) {
+    console.log('Promo Price Hider: Applying Rozetka-only seller filter');
+    location.assign(target);
+  }
+}
+
+// Forget that the filter was applied for the current scope, so it can be applied again
+function resetRozetkaSellerGuard() {
+  const scope = getSellerScope();
+  if (!scope) return;
+  try { sessionStorage.removeItem(sellerAppliedKey(scope)); } catch (e) { /* ignore */ }
+}
+
+// If the extension added seller=rozetka_only to this page, remove it and navigate back
+function undoRozetkaSellerOnly() {
+  const scope = getSellerScope();
+  if (!scope) return;
+  let applied = false;
+  try { applied = !!sessionStorage.getItem(sellerAppliedKey(scope)); } catch (e) { return; }
+  if (!applied) return;
+  resetRozetkaSellerGuard();
+  const target = buildSellerUrl(location.href, false);
+  if (target && target !== location.href) {
+    console.log('Promo Price Hider: Removing Rozetka-only seller filter');
+    location.assign(target);
+  }
 }
 
 // Prune detached DOM nodes from the Set to prevent memory leaks during SPA navigation
@@ -115,6 +229,20 @@ function hidePromoPrice() {
     });
   }
 
+  // Top page banner strip above the header (main page)
+  if (hideTopBanner) {
+    document.querySelectorAll('rz-top-page-banner').forEach(element => {
+      if (hideElement(element)) hiddenCount++;
+    });
+  }
+
+  // Main promo slider next to the catalog menu (main page)
+  if (hideMainSlider) {
+    document.querySelectorAll('rz-top-slider').forEach(element => {
+      if (hideElement(element)) hiddenCount++;
+    });
+  }
+
   // Rozetka AI chat bot button + consultation placeholder
   if (hideAiButton) {
     document.querySelectorAll('rz-chat-bot-button-assist, rz-chat-bot-button-placeholder').forEach(element => {
@@ -122,25 +250,43 @@ function hidePromoPrice() {
     });
   }
 
+  // Seller filter block: move to top and/or auto-select Rozetka as seller
+  if (sellerOnTop || rozetkaSellerOnly) {
+    const sellerFilter = findSellerFilter();
+    if (sellerFilter) {
+      if (sellerOnTop && moveToTop(sellerFilter)) hiddenCount++;
+      if (rozetkaSellerOnly) applyRozetkaSellerOnly(sellerFilter);
+    }
+  }
+
   if (hiddenCount > 0) {
     console.log(`Promo Price Hider: Hidden ${hiddenCount} new promo price elements`);
+  }
+}
+
+// Restore one inline style property only if the extension saved it
+function restoreStyle(element, property, attribute) {
+  if (!element.hasAttribute(attribute)) return;
+  const original = element.getAttribute(attribute);
+  if (original) {
+    element.style.setProperty(property, original);
+  } else {
+    element.style.removeProperty(property);
   }
 }
 
 // Function to show all previously hidden elements
 function showPromoPrice() {
   hiddenElements.forEach(element => {
+    element.removeAttribute(SELLER_TOP_ATTR);
     if (element.hasAttribute('data-hidden-by-extension')) {
-      const originalDisplay = element.getAttribute('data-original-display');
-      if (originalDisplay) {
-        element.style.display = originalDisplay;
-      } else {
-        element.style.removeProperty('display');
+      restoreStyle(element, 'display', 'data-original-display');
+      restoreStyle(element, 'filter', 'data-original-filter');
+      restoreStyle(element, 'opacity', 'data-original-opacity');
+      if (element.hasAttribute('data-original-filter')) {
+        element.style.pointerEvents = '';
+        element.style.userSelect = '';
       }
-      element.style.filter = element.getAttribute('data-original-filter') || '';
-      element.style.opacity = element.getAttribute('data-original-opacity') || '';
-      element.style.pointerEvents = '';
-      element.style.userSelect = '';
 
       element.removeAttribute('data-hidden-by-extension');
       element.removeAttribute('data-original-display');
@@ -153,10 +299,14 @@ function showPromoPrice() {
 }
 
 // Get initial state from storage
-browser.storage.local.get(['enabled', 'blurAds', 'hideAiButton']).then((result) => {
+browser.storage.local.get(['enabled', 'blurAds', 'hideAiButton', 'sellerOnTop', 'rozetkaSellerOnly', 'hideTopBanner', 'hideMainSlider']).then((result) => {
   isEnabled = result.enabled !== false;
   blurAds = result.blurAds !== false;
   hideAiButton = result.hideAiButton !== false;
+  sellerOnTop = result.sellerOnTop !== false;
+  rozetkaSellerOnly = result.rozetkaSellerOnly === true;
+  hideTopBanner = result.hideTopBanner !== false;
+  hideMainSlider = result.hideMainSlider !== false;
   if (isEnabled) {
     initializeHiding();
   }
@@ -172,6 +322,7 @@ browser.storage.onChanged.addListener((changes, area) => {
     isEnabled = changes.enabled.newValue !== false;
     if (!isEnabled) {
       showPromoPrice();
+      if (rozetkaSellerOnly) undoRozetkaSellerOnly();
       return;
     }
     needsReapply = true;
@@ -182,6 +333,27 @@ browser.storage.onChanged.addListener((changes, area) => {
   }
   if (changes.hideAiButton) {
     hideAiButton = changes.hideAiButton.newValue !== false;
+    needsReapply = true;
+  }
+  if (changes.hideTopBanner) {
+    hideTopBanner = changes.hideTopBanner.newValue !== false;
+    needsReapply = true;
+  }
+  if (changes.hideMainSlider) {
+    hideMainSlider = changes.hideMainSlider.newValue !== false;
+    needsReapply = true;
+  }
+  if (changes.sellerOnTop) {
+    sellerOnTop = changes.sellerOnTop.newValue !== false;
+    needsReapply = true;
+  }
+  if (changes.rozetkaSellerOnly) {
+    rozetkaSellerOnly = changes.rozetkaSellerOnly.newValue === true;
+    if (rozetkaSellerOnly) {
+      resetRozetkaSellerGuard();
+    } else {
+      undoRozetkaSellerOnly();
+    }
     needsReapply = true;
   }
 
